@@ -53,6 +53,7 @@ async def say_hello():
 class MessageList(BaseModel):
     session_id: str
     human_say: str
+    conversation_history: List[str]
 
 
 sessions = {}
@@ -73,7 +74,8 @@ async def get_bot_name(authorization: Optional[str] = Header(None)):
         model_name=os.getenv("GPT_MODEL", "gpt-3.5-turbo-0613"),
     )
     name = sales_api.sales_agent.salesperson_name
-    return {"name": name, "model": sales_api.sales_agent.model_name}
+    title = sales_api.sales_agent.salesperson_role
+    return {"name": name, "model": sales_api.sales_agent.model_name, "title": title}
 
 
 @app.post("/chat")
@@ -124,6 +126,7 @@ async def chat_with_sales_agent(req: MessageList, stream: bool = Query(False), a
             stream_gen = sales_api.do_stream(req.conversation_history, req.human_say)
             async for message in stream_gen:
                 data = {"token": message}
+                print(data)
                 yield json.dumps(data).encode("utf-8") + b"\n"
 
         return StreamingResponse(stream_response())

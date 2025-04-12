@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+from typing import List
 
 from langchain_community.chat_models import BedrockChat, ChatLiteLLM
 from langchain_openai import ChatOpenAI
@@ -149,7 +150,7 @@ class SalesGPTAPI:
         }
         return payload
 
-    async def do_stream(self, conversation_history: [str], human_input=None):
+    async def do_stream(self, conversation_history: List[str], human_input=None):
         # TODO
         current_turns = len(conversation_history) + 1
         if current_turns >= self.max_num_turns:
@@ -166,8 +167,8 @@ class SalesGPTAPI:
         if human_input is not None:
             self.sales_agent.human_step(human_input)
 
-        stream_gen = self.sales_agent.astep(stream=True)
-        for model_response in stream_gen:
+        stream_gen = await self.sales_agent.astep(stream=True)
+        async for model_response in stream_gen:
             for choice in model_response.choices:
                 message = choice["delta"]["content"]
                 if message is not None:
