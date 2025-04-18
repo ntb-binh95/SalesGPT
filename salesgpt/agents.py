@@ -25,6 +25,7 @@ from salesgpt.prompts import SALES_AGENT_TOOLS_PROMPT
 from salesgpt.stages import CONVERSATION_STAGES
 from salesgpt.templates import CustomPromptTemplateForTools
 from salesgpt.tools import get_tools, setup_knowledge_base
+from salesgpt.uncensored import UncensoredLLM
 
 
 def _create_retry_decorator(llm: Any) -> Callable[[Any], Any]:
@@ -57,9 +58,10 @@ class SalesGPT(Chain):
     """Controller model for the Sales Agent."""
 
     conversation_history: List[str] = []
-    conversation_stage_id: str = "1"
-    current_conversation_stage: str = CONVERSATION_STAGES.get("1")
+    conversation_stage_id: str = "5"
+    current_conversation_stage: str = CONVERSATION_STAGES.get("5")
     stage_analyzer_chain: StageAnalyzerChain = Field(...)
+    uncensored_llm: UncensoredLLM = Field(...)
     sales_agent_executor: Union[CustomAgentExecutor, None] = Field(...)
     knowledge_base: Union[RetrievalQA, None] = Field(...)
     sales_conversation_utterance_chain: SalesConversationChain = Field(...)
@@ -127,7 +129,7 @@ class SalesGPT(Chain):
         Returns:
             None
         """
-        self.current_conversation_stage = self.retrieve_conversation_stage("1")
+        self.current_conversation_stage = self.retrieve_conversation_stage("5")
         self.conversation_history = []
 
     @time_logger
@@ -312,6 +314,9 @@ class SalesGPT(Chain):
         # Generate agent's utterance
         if self.use_tools:
             ai_message = await self.sales_agent_executor.ainvoke(inputs)
+            print("Binh2 Debug: ", ai_message["output"])
+            ai_message = self.uncensored_llm.adjust(ai_message)
+            print("Binh2 Debug: ", ai_message["output"])
             output = ai_message["output"]
         else:
             ai_message = await self.sales_conversation_utterance_chain.ainvoke(
@@ -632,11 +637,13 @@ class SalesGPT(Chain):
                 verbose=verbose,
                 return_intermediate_steps=True,
             )
+            uncensored_llm = UncensoredLLM()
 
         return cls(
             stage_analyzer_chain=stage_analyzer_chain,
             sales_conversation_utterance_chain=sales_conversation_utterance_chain,
             sales_agent_executor=sales_agent_executor,
+            uncensored_llm=uncensored_llm,
             knowledge_base=knowledge_base,
             model_name=llm.model,
             verbose=verbose,

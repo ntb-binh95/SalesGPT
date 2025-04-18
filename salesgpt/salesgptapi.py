@@ -8,6 +8,7 @@ from langchain_openai import ChatOpenAI
 
 from salesgpt.agents import SalesGPT
 from salesgpt.models import BedrockCustomModel
+from salesgpt.uncensored import UncensoredLLM
 
 
 class SalesGPTAPI:
@@ -31,7 +32,7 @@ class SalesGPTAPI:
                 system_prompt="You are a helpful assistant.",
             )
         else:
-            self.llm = ChatLiteLLM(temperature=0.2, model=model_name)
+            self.llm = ChatLiteLLM(temperature=0.1, model=model_name)
         self.product_catalog = product_catalog
         self.conversation_history = []
         self.use_tools = use_tools
@@ -80,12 +81,13 @@ class SalesGPTAPI:
             self.sales_agent.human_step(human_input)
 
         ai_log = await self.sales_agent.astep(stream=False)
-        await self.sales_agent.adetermine_conversation_stage()
+        print("Binh debug: ", ai_log["output"])
+        print("Binh debug: ", ai_log["conversation_history"])
         # TODO - handle end of conversation in the API - send a special token to the client?
+        await self.sales_agent.adetermine_conversation_stage()
         if self.verbose:
             print("=" * 10)
             print(f"AI LOG {ai_log}")
-            
         if (
             self.sales_agent.conversation_history
             and "<END_OF_CALL>" in self.sales_agent.conversation_history[-1]
